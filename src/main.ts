@@ -12,6 +12,11 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 
 import { createComposer, type ComposerHandle } from "./composer";
+import { ghostText } from "./ghost-text";
+import { loadHistory, record as recordHistory, suggest as suggestHistory } from "./history";
+import { openSaveForm } from "./save-form";
+import { createSnippetList, type SnippetListHandle } from "./snippet-list";
+import { loadSnippets } from "./snippets";
 
 interface PersistedState {
   font_size?: number;
@@ -34,6 +39,8 @@ let unlistenData: UnlistenFn | null = null;
 let unlistenExit: UnlistenFn | null = null;
 
 let composer: ComposerHandle | null = null;
+let snippetList: SnippetListHandle | null = null;
+let composerBarEl: HTMLElement | null = null;
 
 // ---- xterm.js wire-up ----------------------------------------------------
 
@@ -141,8 +148,30 @@ function initChrome() {
         ],
       },
     ],
+    showAuxPane: true,
     showStatusLine: true,
     updater: true,
+  });
+
+  // Snippet list lives in the aux pane.
+  const auxHost = document.createElement("div");
+  auxHost.id = "snippet-pane";
+  chrome.aux!.appendChild(auxHost);
+  const auxHead = document.createElement("h3");
+  auxHead.className = "snippet-pane-head";
+  auxHead.textContent = "Snippets";
+  auxHost.appendChild(auxHead);
+  const auxList = document.createElement("div");
+  auxList.id = "snippet-list";
+  auxHost.appendChild(auxList);
+  snippetList = createSnippetList(auxList, {
+    replace: (body) => { composer?.setBody(body); composer?.focus(); },
+    append: (body) => {
+      const cur = composer?.getBody() ?? "";
+      const sep = cur && !cur.endsWith("\n") ? "\n" : "";
+      composer?.setBody(cur + sep + body);
+      composer?.focus();
+    },
   });
 
   chrome.title.textContent = "Krill Terminal";
@@ -175,17 +204,22 @@ function initChrome() {
   const bar = document.createElement("div");
   bar.id = "composer-bar";
   composerPane.appendChild(bar);
+  composerBarEl = bar;
 
   const btnPaste = mkBtn("Paste",        "secondary", () => paste());
   const btnRun   = mkBtn("Paste & run",  "primary",   () => pasteAndRun());
   const btnSave  = mkBtn("Save…",        "secondary", () => saveSnippet());
-  btnSave.disabled = true;
-  btnSave.title = "Snippet save lands in M3";
   bar.appendChild(btnPaste);
   bar.appendChild(btnRun);
   bar.appendChild(btnSave);
 
-  composer = createComposer(composerHost, { paste, pasteAndRun, save: saveSnippet });
+  composer = createComposer(composerHost, {
+    paste,
+    pasteAndRun,
+    save: saveSnippet,
+    onDocChange: (body) => snippetList?.setQuery(body),
+    extraExtensions: [ghostText(suggestHistory)],
+  });
 
   // Status line — M1 labels the shell. M5 adds pid + last exit code.
   const shellSpan = document.createElement("span");
@@ -219,18 +253,19 @@ function paste(): void {
   term.focus();
 }
 
-/** Paste, then send a newline so the shell runs it. */
+/** Paste, then send a newline so the shell runs it. Records to history. */
 function pasteAndRun(): void {
   if (!composer || ptyId === null) return;
   const body = composer.getBody();
   if (!body) return;
   void invoke("pty_write", { id: ptyId, data: body + "\n" });
+  recordHistory(body);
   term.focus();
 }
 
-/** Stub for M3 — keeps the keybinding alive without doing anything. */
 function saveSnippet(): void {
-  // TODO(M3): open inline save form (name + tags) and persist.
+  if (!composer || !composerBarEl) return;
+  openSaveForm(() => composer!.getBody(), composerBarEl);
 }
 
 // ---- Split divider --------------------------------------------------------
@@ -320,6 +355,10 @@ async function boot() {
     const loaded = await invoke<PersistedState | null>("load_state");
     if (loaded) Object.assign(persisted, loaded);
   } catch { /* no prior state */ }
+
+  // Load snippets + history before the chrome mounts so the aux pane
+  // and ghost-text have data to read on first paint.
+  await Promise.all([loadSnippets(), loadHistory()]);
 
   applyFontSize(persisted.font_size ?? FONT_DEFAULT);
 

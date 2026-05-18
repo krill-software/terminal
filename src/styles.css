@@ -157,3 +157,172 @@ html, body {
 #status-shell {
   font-family: var(--fm-mono);
 }
+
+/* ---- Aux pane (snippet list) ------------------------------------------ */
+
+#snippet-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.snippet-pane-head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fm-muted);
+  margin: 0;
+  padding: 14px 12px 8px;
+}
+#snippet-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fm-rule-strong) transparent;
+}
+
+.snippet-empty {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--fm-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.snippet-row {
+  position: relative;
+  display: flex;
+}
+.snippet-row + .snippet-row { border-top: 1px solid var(--fm-rule); }
+.snippet-row:hover { background: var(--fm-rule); }
+
+.snippet-label {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--fm-text);
+  padding: 8px 32px 8px 12px;
+  cursor: pointer;
+}
+.snippet-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.snippet-preview {
+  font-family: var(--fm-mono);
+  font-size: 11px;
+  color: var(--fm-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.snippet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.snippet-tag {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--fm-rule-strong);
+  color: var(--fm-text);
+}
+
+.snippet-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--fm-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  visibility: hidden;
+}
+.snippet-row:hover .snippet-delete { visibility: visible; }
+.snippet-delete:hover { color: var(--fm-text); background: var(--fm-rule-strong); }
+
+/* ---- Ghost-text completion (composer) -------------------------------- */
+
+.cm-ghost-text {
+  color: var(--fm-muted);
+  opacity: 0.6;
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* ---- Save-snippet form (overlay) ------------------------------------- */
+
+.save-form-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(48, 52, 63, 0.16);
+  z-index: 50;
+}
+.save-form {
+  position: fixed;
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-rule-strong);
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(48, 52, 63, 0.20);
+  padding: 14px 16px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.save-form h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fm-text);
+}
+.save-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--fm-muted);
+}
+.save-form input {
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  border: 1px solid var(--fm-rule-strong);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+.save-form input:focus { outline: none; border-color: var(--fm-accent); }
+
+.save-form-body {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--fm-rule);
+  border-radius: 4px;
+  font-family: var(--fm-mono);
+  font-size: 11px;
+  color: var(--fm-text);
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.save-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}

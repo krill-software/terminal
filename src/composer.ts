@@ -8,7 +8,7 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
-import { EditorState, Prec } from "@codemirror/state";
+import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, drawSelection, keymap } from "@codemirror/view";
 
 export interface ComposerHandlers {
@@ -16,8 +16,12 @@ export interface ComposerHandlers {
   paste: () => void;
   /** Paste then send Enter — run the command in the shell. */
   pasteAndRun: () => void;
-  /** Save the body as a snippet (wired in M3; pass a no-op until then). */
+  /** Save the body as a snippet. */
   save: () => void;
+  /** Called whenever the doc changes. Used to live-filter the snippet list. */
+  onDocChange?: (body: string) => void;
+  /** Extra CodeMirror extensions to mix in (ghost-text completion, etc.). */
+  extraExtensions?: Extension[];
 }
 
 export interface ComposerHandle {
@@ -61,7 +65,13 @@ export function createComposer(
       EditorView.lineWrapping,
       EditorState.tabSize.of(2),
       commitKeymap,
+      ...(handlers.extraExtensions ?? []),
       keymap.of([...defaultKeymap, ...historyKeymap]),
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged && handlers.onDocChange) {
+          handlers.onDocChange(u.state.doc.toString());
+        }
+      }),
     ],
   });
 

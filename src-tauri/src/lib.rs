@@ -153,6 +153,34 @@ fn save_state(state: AppState) -> Result<(), String> {
     kstate::save(SLUG, "state.json", &state)
 }
 
+// ---- Snippet + history persistence ------------------------------------
+//
+// Both are simple JSON arrays of opaque records. Frontend owns the shape;
+// Rust just shuttles bytes via `serde_json::Value`. Stored alongside
+// `state.json` in the XDG state dir.
+
+#[tauri::command]
+fn snippets_load() -> serde_json::Value {
+    kstate::load::<serde_json::Value>(SLUG, "snippets.json")
+        .unwrap_or_else(|| serde_json::Value::Array(vec![]))
+}
+
+#[tauri::command]
+fn snippets_save(snippets: serde_json::Value) -> Result<(), String> {
+    kstate::save(SLUG, "snippets.json", &snippets)
+}
+
+#[tauri::command]
+fn history_load() -> serde_json::Value {
+    kstate::load::<serde_json::Value>(SLUG, "history.json")
+        .unwrap_or_else(|| serde_json::Value::Array(vec![]))
+}
+
+#[tauri::command]
+fn history_save(history: serde_json::Value) -> Result<(), String> {
+    kstate::save(SLUG, "history.json", &history)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -169,6 +197,10 @@ pub fn run() {
             pty_kill,
             load_state,
             save_state,
+            snippets_load,
+            snippets_save,
+            history_load,
+            history_save,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
