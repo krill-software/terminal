@@ -1,0 +1,77 @@
+@font-face {
+  font-family: "Hasklig";
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+  src: url("/src/assets/fonts/Hasklig-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hasklig";
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+  src: url("/src/assets/fonts/Hasklig-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hasklig";
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+  src: url("/src/assets/fonts/Hasklig-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hasklig";
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
+  src: url("/src/assets/fonts/Hasklig-BoldItalic.woff2") format("woff2");
+}
+
+/* krill-terminal — app-specific tokens. The 5 named palette colors and
+ * Space-Cadet alpha rules come from @krill-software/desktop-ui. */
+:root {
+  --fm-mono: "Hasklig", "Source Code Pro", "JetBrains Mono", ui-monospace, monospace;
+  --fm-selection: rgba(221, 117, 150, 0.22);
+}
+
+::selection {
+  background: var(--fm-selection);
+  text-shadow: none;
+}
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "calt" 1, "liga" 1;
+}
+
+/* Main pane fills the viewport; the terminal host fills the main pane. */
+#viewport {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#term-host {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 10px;
+  overflow: hidden;
+}
+
+/* xterm.js host element styling. Override its default white/black palette
+ * via the `theme` option, but its outer-border styling is ours. */
+.xterm,
+.xterm-viewport,
+.xterm-screen {
+  background: transparent !important;
+}
+.xterm .xterm-viewport {
+  /* Match krill's thin scrollbar. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--fm-rule-strong) transparent;
+}
+
+#status-shell {
+  font-family: var(--fm-mono);
+}

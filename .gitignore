@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.log
+
+# Rust / Tauri
+src-tauri/target
+src-tauri/gen
+
+# Local env
+.env
+.env.local
