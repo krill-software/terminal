@@ -1,0 +1,80 @@
+// Composer — the multi-line shell-command editor that sits below the
+// terminal. CodeMirror 6 with shell highlighting. Exposes get/set on its
+// document plus the three commit actions (Paste / Paste & run / Save).
+//
+// The composer never clears itself; users iterate on a draft and run it
+// multiple times. Save is wired in M3 once the snippet store exists.
+
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { StreamLanguage } from "@codemirror/language";
+import { shell } from "@codemirror/legacy-modes/mode/shell";
+import { EditorState, Prec } from "@codemirror/state";
+import { EditorView, drawSelection, keymap } from "@codemirror/view";
+
+export interface ComposerHandlers {
+  /** Paste the body into the terminal at the cursor (no trailing newline). */
+  paste: () => void;
+  /** Paste then send Enter — run the command in the shell. */
+  pasteAndRun: () => void;
+  /** Save the body as a snippet (wired in M3; pass a no-op until then). */
+  save: () => void;
+}
+
+export interface ComposerHandle {
+  view: EditorView;
+  getBody(): string;
+  setBody(s: string): void;
+  focus(): void;
+}
+
+export function createComposer(
+  host: HTMLElement,
+  handlers: ComposerHandlers,
+): ComposerHandle {
+  // Ctrl+Enter = paste & run, Ctrl+Shift+Enter = paste only. Highest
+  // precedence so they shadow CodeMirror's default keymap which has
+  // Mod-Enter bound to "insert blank line."
+  const commitKeymap = Prec.highest(keymap.of([
+    {
+      key: "Mod-Enter",
+      preventDefault: true,
+      run: () => { handlers.pasteAndRun(); return true; },
+    },
+    {
+      key: "Mod-Shift-Enter",
+      preventDefault: true,
+      run: () => { handlers.paste(); return true; },
+    },
+    {
+      key: "Mod-s",
+      preventDefault: true,
+      run: () => { handlers.save(); return true; },
+    },
+  ]));
+
+  const state = EditorState.create({
+    doc: "",
+    extensions: [
+      history(),
+      drawSelection(),
+      StreamLanguage.define(shell),
+      EditorView.lineWrapping,
+      EditorState.tabSize.of(2),
+      commitKeymap,
+      keymap.of([...defaultKeymap, ...historyKeymap]),
+    ],
+  });
+
+  const view = new EditorView({ state, parent: host });
+
+  return {
+    view,
+    getBody: () => view.state.doc.toString(),
+    setBody: (s: string) => {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: s },
+      });
+    },
+    focus: () => view.focus(),
+  };
+}

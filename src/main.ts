@@ -11,6 +11,8 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 
+import { createComposer, type ComposerHandle } from "./composer";
+
 interface PersistedState {
   font_size?: number;
   split_ratio?: number;
@@ -30,6 +32,8 @@ let fit: FitAddon;
 let ptyId: number | null = null;
 let unlistenData: UnlistenFn | null = null;
 let unlistenExit: UnlistenFn | null = null;
+
+let composer: ComposerHandle | null = null;
 
 // ---- xterm.js wire-up ----------------------------------------------------
 
@@ -143,17 +147,129 @@ function initChrome() {
 
   chrome.title.textContent = "Krill Terminal";
 
-  const host = document.createElement("div");
-  host.id = "term-host";
-  chrome.viewport.appendChild(host);
+  // Vertical stack inside the main viewport: terminal pane (top),
+  // drag handle, composer pane (bottom with buttons under the editor).
+  const stack = document.createElement("div");
+  stack.id = "term-stack";
+  chrome.viewport.appendChild(stack);
 
-  // Status line — M1 just labels the shell. M5 adds pid + last exit code.
+  const termPane = document.createElement("div");
+  termPane.id = "term-pane";
+  stack.appendChild(termPane);
+
+  const handle = document.createElement("div");
+  handle.id = "term-split";
+  handle.setAttribute("role", "separator");
+  handle.setAttribute("aria-orientation", "horizontal");
+  stack.appendChild(handle);
+  installSplitDrag(handle, termPane);
+
+  const composerPane = document.createElement("div");
+  composerPane.id = "composer-pane";
+  stack.appendChild(composerPane);
+
+  const composerHost = document.createElement("div");
+  composerHost.id = "composer-host";
+  composerPane.appendChild(composerHost);
+
+  const bar = document.createElement("div");
+  bar.id = "composer-bar";
+  composerPane.appendChild(bar);
+
+  const btnPaste = mkBtn("Paste",        "secondary", () => paste());
+  const btnRun   = mkBtn("Paste & run",  "primary",   () => pasteAndRun());
+  const btnSave  = mkBtn("Save…",        "secondary", () => saveSnippet());
+  btnSave.disabled = true;
+  btnSave.title = "Snippet save lands in M3";
+  bar.appendChild(btnPaste);
+  bar.appendChild(btnRun);
+  bar.appendChild(btnSave);
+
+  composer = createComposer(composerHost, { paste, pasteAndRun, save: saveSnippet });
+
+  // Status line — M1 labels the shell. M5 adds pid + last exit code.
   const shellSpan = document.createElement("span");
   shellSpan.id = "status-shell";
   shellSpan.textContent = "shell";
   chrome.statusInfo!.appendChild(shellSpan);
 
-  buildTerminal(host);
+  buildTerminal(termPane);
+
+  // Apply persisted split ratio after the panes exist.
+  if (persisted.split_ratio) applySplitRatio(persisted.split_ratio);
+}
+
+function mkBtn(label: string, variant: "primary" | "secondary", onClick: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = `composer-btn ${variant}`;
+  b.textContent = label;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+// ---- Composer actions ----------------------------------------------------
+
+/** Type the composer body into the PTY as if the user pasted it. No newline. */
+function paste(): void {
+  if (!composer || ptyId === null) return;
+  const body = composer.getBody();
+  if (!body) return;
+  void invoke("pty_write", { id: ptyId, data: body });
+  term.focus();
+}
+
+/** Paste, then send a newline so the shell runs it. */
+function pasteAndRun(): void {
+  if (!composer || ptyId === null) return;
+  const body = composer.getBody();
+  if (!body) return;
+  void invoke("pty_write", { id: ptyId, data: body + "\n" });
+  term.focus();
+}
+
+/** Stub for M3 — keeps the keybinding alive without doing anything. */
+function saveSnippet(): void {
+  // TODO(M3): open inline save form (name + tags) and persist.
+}
+
+// ---- Split divider --------------------------------------------------------
+
+const SPLIT_MIN_RATIO = 0.2;
+const SPLIT_MAX_RATIO = 0.85;
+
+function applySplitRatio(r: number): void {
+  const stack = document.getElementById("term-stack");
+  if (!stack) return;
+  const clamped = Math.max(SPLIT_MIN_RATIO, Math.min(SPLIT_MAX_RATIO, r));
+  stack.style.setProperty("--term-fr", String(clamped));
+  stack.style.setProperty("--composer-fr", String(1 - clamped));
+  persisted.split_ratio = clamped;
+  schedulePersist();
+  try { fit?.fit(); } catch { /* term not ready */ }
+}
+
+function installSplitDrag(handle: HTMLElement, _termPane: HTMLElement): void {
+  let dragging = false;
+
+  handle.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const stack = document.getElementById("term-stack")!;
+    const rect = stack.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    applySplitRatio(y / rect.height);
+  });
+  const end = (e: PointerEvent) => {
+    dragging = false;
+    handle.releasePointerCapture(e.pointerId);
+  };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
 }
 
 // ---- Window persistence ---------------------------------------------------

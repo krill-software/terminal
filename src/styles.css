@@ -45,29 +45,111 @@ html, body {
   font-feature-settings: "calt" 1, "liga" 1;
 }
 
-/* Main pane fills the viewport; the terminal host fills the main pane. */
+/* Main pane fills the viewport; #term-stack inside it is a 3-row grid:
+ * terminal pane / drag handle / composer pane. Split ratio comes from
+ * a CSS variable the JS divider mutates. */
 #viewport {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-#term-host {
+#term-stack {
   flex: 1;
+  display: grid;
+  grid-template-rows:
+    minmax(0, calc(var(--term-fr, 0.65) * 1fr))
+    auto
+    minmax(0, calc(var(--composer-fr, 0.35) * 1fr));
   min-height: 0;
-  padding: 8px 10px;
+}
+
+#term-pane {
+  min-height: 0;
+  padding: 8px 10px 4px;
   overflow: hidden;
 }
 
-/* xterm.js host element styling. Override its default white/black palette
- * via the `theme` option, but its outer-border styling is ours. */
+#term-split {
+  height: 4px;
+  background: var(--fm-rule);
+  cursor: row-resize;
+}
+#term-split:hover,
+#term-split:active { background: var(--fm-rule-strong); }
+
+#composer-pane {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  gap: 6px;
+  background: var(--fm-bg);
+}
+
+#composer-host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#composer-host .cm-editor {
+  height: 100%;
+  background: transparent;
+  font-family: var(--fm-mono);
+  font-size: 13px;
+}
+#composer-host .cm-editor.cm-focused { outline: none; }
+#composer-host .cm-scroller {
+  font-family: var(--fm-mono);
+  overflow: auto;
+}
+#composer-host .cm-content { caret-color: var(--fm-accent); padding: 4px 0; }
+#composer-host .cm-cursor { border-left-color: var(--fm-accent); border-left-width: 2px; }
+#composer-host .cm-selectionBackground,
+#composer-host .cm-content ::selection,
+#composer-host .cm-line ::selection {
+  background: var(--fm-selection) !important;
+}
+
+#composer-bar {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.composer-btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+.composer-btn.secondary {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-rule-strong);
+  color: var(--fm-text);
+}
+.composer-btn.secondary:hover:not(:disabled) {
+  background: var(--fm-rule);
+  border-color: var(--fm-muted);
+}
+.composer-btn.primary {
+  background: var(--fm-accent);
+  border: 1px solid var(--fm-accent);
+  color: var(--fm-bg);
+  font-weight: 600;
+}
+.composer-btn.primary:hover { background: var(--fm-accent-strong); border-color: var(--fm-accent-strong); }
+.composer-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* xterm.js host. Theme handles colors; we just transparent the chrome. */
 .xterm,
 .xterm-viewport,
 .xterm-screen {
   background: transparent !important;
 }
 .xterm .xterm-viewport {
-  /* Match krill's thin scrollbar. */
   scrollbar-width: thin;
   scrollbar-color: var(--fm-rule-strong) transparent;
 }
