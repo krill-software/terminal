@@ -9,7 +9,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
-import { EditorView, drawSelection, keymap } from "@codemirror/view";
+import { EditorView, drawSelection, keymap, placeholder } from "@codemirror/view";
 
 export interface ComposerHandlers {
   /** Paste the body into the terminal at the cursor (no trailing newline). */
@@ -61,6 +61,7 @@ export function createComposer(
     extensions: [
       history(),
       drawSelection(),
+      placeholder("Edit input here…"),
       StreamLanguage.define(shell),
       EditorView.lineWrapping,
       EditorState.tabSize.of(2),

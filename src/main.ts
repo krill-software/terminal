@@ -14,6 +14,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { createComposer, type ComposerHandle } from "./composer";
 import { ghostText } from "./ghost-text";
 import { loadHistory, record as recordHistory, suggest as suggestHistory } from "./history";
+import { linterExtension } from "./linter";
 import { openSaveForm } from "./save-form";
 import { createSnippetList, type SnippetListHandle } from "./snippet-list";
 import { loadSnippets } from "./snippets";
@@ -218,7 +219,7 @@ function initChrome() {
     pasteAndRun,
     save: saveSnippet,
     onDocChange: (body) => snippetList?.setQuery(body),
-    extraExtensions: [ghostText(suggestHistory)],
+    extraExtensions: [ghostText(suggestHistory), linterExtension()],
   });
 
   // Status line — M1 labels the shell. M5 adds pid + last exit code.
@@ -285,26 +286,29 @@ function applySplitRatio(r: number): void {
 }
 
 function installSplitDrag(handle: HTMLElement, _termPane: HTMLElement): void {
-  let dragging = false;
-
-  handle.addEventListener("pointerdown", (e) => {
-    dragging = true;
-    handle.setPointerCapture(e.pointerId);
+  handle.addEventListener("mousedown", (e) => {
+    console.log("[split] mousedown", e.clientY);
     e.preventDefault();
+    e.stopPropagation();
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: MouseEvent) => {
+      const stack = document.getElementById("term-stack");
+      if (!stack) return;
+      const rect = stack.getBoundingClientRect();
+      const y = ev.clientY - rect.top;
+      applySplitRatio(y / rect.height);
+    };
+    const onUp = () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   });
-  handle.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const stack = document.getElementById("term-stack")!;
-    const rect = stack.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    applySplitRatio(y / rect.height);
-  });
-  const end = (e: PointerEvent) => {
-    dragging = false;
-    handle.releasePointerCapture(e.pointerId);
-  };
-  handle.addEventListener("pointerup", end);
-  handle.addEventListener("pointercancel", end);
 }
 
 // ---- Window persistence ---------------------------------------------------

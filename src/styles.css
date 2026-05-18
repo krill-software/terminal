@@ -56,35 +56,43 @@ html, body {
 
 #term-stack {
   flex: 1;
-  display: grid;
-  grid-template-rows:
-    minmax(0, calc(var(--term-fr, 0.65) * 1fr))
-    auto
-    minmax(0, calc(var(--composer-fr, 0.35) * 1fr));
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 #term-pane {
+  flex: var(--term-fr, 0.65);
   min-height: 0;
   padding: 8px 10px 4px;
   overflow: hidden;
 }
 
+/* Drag handle between terminal pane and composer pane. 6px tall for a
+ * comfortable hit area; the visible rule is centered via a 2px border
+ * at top. touch-action: none keeps mobile/trackpad scroll from
+ * intercepting the gesture. */
 #term-split {
-  height: 4px;
-  background: var(--fm-rule);
+  height: 6px;
+  background: transparent;
+  border-top: 2px solid var(--fm-rule);
   cursor: row-resize;
+  touch-action: none;
 }
 #term-split:hover,
-#term-split:active { background: var(--fm-rule-strong); }
+#term-split:active { border-top-color: var(--fm-accent); }
 
 #composer-pane {
+  flex: var(--composer-fr, 0.35);
   min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 8px 10px;
   gap: 6px;
-  background: var(--fm-bg);
+  /* Soft Artichoke wash distinguishes the input surface from the
+   * terminal output above. Alpha-derived so it sits on top of
+   * --fm-bg cleanly without introducing a new palette color. */
+  background: rgba(135, 132, 114, 0.10);
 }
 
 #composer-host {
@@ -109,6 +117,10 @@ html, body {
 #composer-host .cm-content ::selection,
 #composer-host .cm-line ::selection {
   background: var(--fm-selection) !important;
+}
+#composer-host .cm-placeholder {
+  color: var(--fm-muted);
+  font-style: italic;
 }
 
 #composer-bar {
@@ -263,6 +275,50 @@ html, body {
   pointer-events: none;
   white-space: pre;
 }
+
+/* ---- Linter decorations (composer) ----------------------------------- */
+
+/* Recognized command tokens (resolves via PATH or is a shell builtin). */
+.cm-cmd-token {
+  color: var(--fm-accent);
+  font-weight: 700;
+}
+
+/* shellcheck findings — translucent pink wash, same style as the
+ * selection highlight in other krill apps. Hover for a tooltip. */
+.cm-shellcheck-finding {
+  background: var(--fm-selection);
+  border-radius: 2px;
+}
+
+.cm-tooltip.cm-shellcheck-tooltip,
+.cm-tooltip:has(.cm-shellcheck-tooltip) {
+  background: var(--fm-bg);
+  border: 1px solid var(--fm-rule-strong);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(48, 52, 63, 0.16);
+  padding: 8px 10px;
+  max-width: 340px;
+  font-size: 12px;
+  color: var(--fm-text);
+}
+.cm-shellcheck-tooltip-level {
+  font-family: var(--fm-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--fm-muted);
+  margin-bottom: 4px;
+}
+.cm-shellcheck-tooltip-msg {
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.cm-shellcheck-tooltip-link {
+  font-size: 11px;
+  color: var(--fm-accent);
+  text-decoration: none;
+}
+.cm-shellcheck-tooltip-link:hover { color: var(--fm-accent-strong); text-decoration: underline; }
 
 /* ---- Save-snippet form (overlay) ------------------------------------- */
 

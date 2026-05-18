@@ -181,6 +181,64 @@ fn history_save(history: serde_json::Value) -> Result<(), String> {
     kstate::save(SLUG, "history.json", &history)
 }
 
+// ---- Command lookup ---------------------------------------------------
+//
+// `which_command` resolves a single executable name via PATH and returns
+// whether it exists. Frontend caches results per session — `which` is
+// fast but we still don't want to re-resolve the same token on every
+// keystroke. Shell builtins (cd, echo, etc.) are handled on the
+// frontend side.
+
+#[tauri::command]
+fn which_command(name: String) -> bool {
+    which::which(&name).is_ok()
+}
+
+// ---- shellcheck wrapper -----------------------------------------------
+//
+// Spawns `shellcheck --shell=bash --format=json -` and pipes the
+// composer body to its stdin. Returns the parsed JSON array of findings.
+// A missing shellcheck binary returns the sentinel error "NOT_INSTALLED"
+// which the frontend special-cases to show install guidance.
+
+#[tauri::command]
+fn shellcheck_run(body: String) -> Result<serde_json::Value, String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let mut child = match Command::new("shellcheck")
+        .args(["--shell=bash", "--format=json", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err("NOT_INSTALLED".to_string());
+        }
+        Err(e) => return Err(format!("spawn: {e}")),
+    };
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(body.as_bytes())
+            .map_err(|e| format!("write: {e}"))?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("wait: {e}"))?;
+
+    // shellcheck exits non-zero when there are findings; that's not an
+    // error condition for us. Parse stdout regardless.
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if stdout.trim().is_empty() {
+        return Ok(serde_json::Value::Array(vec![]));
+    }
+    serde_json::from_str(&stdout).map_err(|e| format!("parse: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -201,6 +259,8 @@ pub fn run() {
             snippets_save,
             history_load,
             history_save,
+            which_command,
+            shellcheck_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
