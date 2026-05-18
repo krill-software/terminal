@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Krill Terminal",
   "version": "0.1.0",
-  "identifier": "software.krill.krill-terminal",
+  "identifier": "software.krill.terminal",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -31,7 +31,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg3Nzg5QTc4MEExOTM4MjIKUldRaU9Ca0tlSnA0aDQzcXJLRWtKWTI0K0lDM3IwTW4wcGUzdFZ5RE01ckYraU5nL1FRZWRXRmgK",
       "endpoints": [
-        "https://github.com/krill-software/krill-terminal/releases/latest/download/latest.json"
+        "https://github.com/krill-software/terminal/releases/latest/download/latest.json"
       ]
     }
   },

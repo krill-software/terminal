@@ -121,7 +121,9 @@ Standard terminal keys (`Ctrl+C` → SIGINT, `Ctrl+D` → EOF) pass through to t
 
 ## Linux integration
 
-- Slug: `krill-terminal`. Binary `krill-terminal`. Identifier `software.krill.krill-terminal`.
+- Directory / repo: `terminal`. Identifier: `software.krill.terminal`.
+- productName: `Krill Terminal`. Binary + `.deb` Package: `krill-terminal` (the `krill-` prefix avoids colliding with system `gnome-terminal` / `xterm` etc. in apt's namespace).
+- State dir: `~/.local/state/krill-terminal/` — also prefixed for the same collision reason.
 - No MIME associations — terminals don't "open" files.
 - No `.desktop` file association — it's a standalone app.
 - Distribution: AppImage + `.deb`, both via the shared `krill-app-release.yml` workflow.
